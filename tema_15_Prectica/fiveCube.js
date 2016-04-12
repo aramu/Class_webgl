@@ -57,6 +57,14 @@ vector.prototype.see = function() {
     console.log('x,y,z: (',this.x, this.y, this.z, ')');
 };
 
+vector.prototype.getGradoXY = function () {
+    return 180*(this.x/Math.abs(this.x)-1)/2 + Math.r2a(Math.atan(this.y / this.x));
+}
+
+vector.prototype.negative = function () {
+    return new vector(-this.x, -this.y, -this.z);
+}
+
 function main() {
     var canvas = document.getElementById('webgl');
     config.aspect = canvas.width / canvas.height;
@@ -94,6 +102,14 @@ function main() {
     }
 };
 
+Math.a2r = function (angle) {
+  return angle * Math.PI / 180;
+}
+
+Math.r2a = function (radian) {
+  return radian * 180 / Math.PI;
+}
+
 var keycode = {
     up: 38,
     down: 40,
@@ -103,16 +119,40 @@ var keycode = {
     x: 88
 };
 
+config.angle = 0; // grado
+config.gradoRotate = 2; // grado
+// config.stepLen = 1;
+
 function keydown(ev) {
+    orient = cam.posi.less(cam.dirt);
     switch(ev.keyCode){
         case keycode.up:
-            console.log('up');
-            cam.posi.see();
-            //---->>>cam.posi = cam.posi.sum(cam.dirt.less(cam.posi).norm());
-            cam.posi.see();
+            // console.log('up');
+            cam.posi = cam.posi.sum(orient.norm());
+            cam.dirt = cam.dirt.sum(orient.norm());
             break;
         case keycode.down:
-            cam.posi = cam.posi.less(cam.dirt.less(cam.posi).norm());
+            // console.log('down');
+            cam.posi = cam.posi.less(orient.norm());
+            cam.dirt = cam.dirt.less(orient.norm());
+            break;
+        case keycode.right:
+            config.angle = orient.negative().getGradoXY();
+            config.angle -= config.gradoRotate;
+            var xi = orient.mod() * Math.cos(Math.a2r(config.angle));
+            var yi = orient.mod() * Math.sin(Math.a2r(config.angle));
+            var zi = 0;
+            angleVector = new vector(xi, yi, zi);
+            cam.dirt = cam.posi.sum(angleVector);
+            break;
+        case keycode.left:
+            config.angle = orient.negative().getGradoXY();
+            config.angle += config.gradoRotate;
+            var xi = orient.mod() * Math.cos(Math.a2r(config.angle));
+            var yi = orient.mod() * Math.sin(Math.a2r(config.angle));
+            var zi = 0;
+            angleVector = new vector(xi, yi, zi);
+            cam.dirt = cam.posi.sum(angleVector);
             break;
         default: return; // console.log(ev); // Prevent the unnecessary drawing
     }
@@ -166,7 +206,7 @@ function initTextures() {
   gl.bindTexture(gl.TEXTURE_2D, config.cubeTexture);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 255, 0, 255]));
   var cubeImage = new Image();
-  cubeImage.src = "./resources/cubetexture.png"
+  cubeImage.src = "./resources/marbletexture.png"
   cubeImage.onload = function() { handleTextureLoaded(config.cubeTexture, cubeImage); }
 
   config.groundTexture = gl.createTexture();
@@ -194,8 +234,8 @@ function pview() {
     var pMatrix = new Matrix4();
 
     pMatrix.setPerspective(20, config.aspect, 1, 100);
-    vMatrix.lookAt(cam.dirt.x, cam.dirt.y, cam.dirt.z, 
-                   cam.posi.x, cam.posi.y, cam.posi.z, 
+    vMatrix.lookAt(cam.dirt.x, cam.dirt.y, cam.dirt.z,
+                   cam.posi.x, cam.posi.y, cam.posi.z,
                    cam.rote.x, cam.rote.y, cam.rote.z);
 
     var pvMatrix = new Matrix4();
@@ -309,7 +349,7 @@ var cube = {
 
 var ground = {
     vertices: new Float32Array([
-        -1.0, -1.0, -1.0,   1.0, -1.0, -1.0,   1.0, 1.0, -1.0,  -1.0, 1.0,  -1.0 // Bottom face       
+        -1.0, -1.0, -1.0,   1.0, -1.0, -1.0,   1.0, 1.0, -1.0,  -1.0, 1.0,  -1.0 // Bottom face
     ]),
 
     textureCoord: new Float32Array([
